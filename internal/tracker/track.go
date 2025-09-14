@@ -72,7 +72,7 @@ func Track(wg *sync.WaitGroup, projectName string, paths []string) error {
 		return nil
 	}
 
-	// update after hashes changed asda dsffsdfs
+	// update after hashes changed
 	if isHashesChanged(data.LastHashes, hashes) {
 		data.LastHashes = hashes
 		data.ActiveTime += time.Since(data.LastTime)
@@ -82,10 +82,9 @@ func Track(wg *sync.WaitGroup, projectName string, paths []string) error {
 	}
 
 	// update after idle time
-	if data.LastTime.Before(time.Now().Add(-internal.CHECK_INTERVAL)) {
+	if data.LastTime.Before(time.Now().Add(-internal.CHECK_INTERVAL)) && data.ActiveTime > 0 {
 		saveActiveTime(data)
 		data.ActiveTime = time.Duration(0)
-		data.LastTime = time.Now()
 	}
 
 	return nil
@@ -98,6 +97,10 @@ func Track(wg *sync.WaitGroup, projectName string, paths []string) error {
 func ForceSave(projectName string, paths []string) {
 	data, ok := DATA[projectName]
 	if !ok {
+		return
+	}
+
+	if data.ActiveTime <= 0 {
 		return
 	}
 

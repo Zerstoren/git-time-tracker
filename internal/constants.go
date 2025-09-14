@@ -17,7 +17,9 @@ type Config struct {
 	Repositories  map[string][]string `json:"repositories"`
 }
 
-var CHECK_INTERVAL = 20 * time.Minute
+const DEFAULT_SIZE = time.Minute
+
+var CHECK_INTERVAL = 20 * DEFAULT_SIZE
 var WRITE_TO_FILE = true
 var FILE_PATH = "time-tracker.txt"
 var LOG_FILE_PATH = "time-logs.log"
@@ -56,7 +58,7 @@ func ReadConfig() {
 		log.SetOutput(write)
 	}
 
-	CHECK_INTERVAL = time.Duration(config.CheckInterval) * time.Minute
+	CHECK_INTERVAL = time.Duration(config.CheckInterval) * DEFAULT_SIZE
 	WRITE_TO_FILE = config.WriteToFile
 	FILE_PATH = config.FilePath
 	REPOSITORIES = config.Repositories

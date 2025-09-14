@@ -13,7 +13,7 @@ import (
 // @return string - the hash of the git status
 // @return error - the error if execution failed
 func GetGitStatusHash(repoPath string) (string, error) {
-	cmd := exec.Command("git", "diff", "HEAD")
+	cmd := exec.Command("git", "--no-pager", "diff", "--no-prefix", "-U1", "HEAD")
 	cmd.Dir = repoPath
 	cmd.Stderr = os.Stderr
 	output, err := cmd.Output()
