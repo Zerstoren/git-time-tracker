@@ -1,6 +1,5 @@
 {
-  "check_interval": 20,
-  "max_idle_time": 40,
+  "check_interval": 1,
   "write_to_file": true,
   
   "file_path": "../time-tracker.txt",

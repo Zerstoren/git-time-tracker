@@ -17,14 +17,15 @@ type Config struct {
 	Repositories  map[string][]string `json:"repositories"`
 }
 
-var CHECK_INTERVAL = 60 * time.Second
-var MAX_IDLE_TIME = 60 * time.Minute
+var CHECK_INTERVAL = 20 * time.Minute
 var WRITE_TO_FILE = true
 var FILE_PATH = "time-tracker.txt"
 var LOG_FILE_PATH = "time-logs.log"
 var REPOSITORIES = map[string][]string{}
 
-func ReadConfig() *Config {
+// This function is used to read the config file
+// @return void
+func ReadConfig() {
 	config := &Config{}
 
 	configFile, err := os.ReadFile("config.json")
@@ -40,7 +41,7 @@ func ReadConfig() *Config {
 	for project, paths := range config.Repositories {
 		if strings.Contains(project, ":") {
 			// stop program with fatal error
-			panic("Project name cannot contain ':'")
+			panic("Project name can`t contain ':'")
 		}
 
 		REPOSITORIES[project] = paths
@@ -55,11 +56,8 @@ func ReadConfig() *Config {
 		log.SetOutput(write)
 	}
 
-	CHECK_INTERVAL = time.Duration(config.CheckInterval) * time.Second
-	MAX_IDLE_TIME = time.Duration(config.MaxIdleTime) * time.Second
+	CHECK_INTERVAL = time.Duration(config.CheckInterval) * time.Minute
 	WRITE_TO_FILE = config.WriteToFile
 	FILE_PATH = config.FilePath
 	REPOSITORIES = config.Repositories
-
-	return config
 }
