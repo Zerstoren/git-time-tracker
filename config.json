@@ -1,0 +1,14 @@
+{
+  "check_interval": 10,
+  "max_idle_time": 20,
+  "write_to_file": true,
+  
+  "file_path": "time-tracker.txt",
+  "log_file_path": "time-logs.log",
+
+  "repositories": {
+    "time-tracker": [
+      "/Users/user/Documents/Github/git-time-tracker"
+    ]
+  }
+}
