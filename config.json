@@ -1,10 +1,10 @@
 {
-  "check_interval": 10,
-  "max_idle_time": 20,
+  "check_interval": 20,
+  "max_idle_time": 40,
   "write_to_file": true,
   
-  "file_path": "time-tracker.txt",
-  "log_file_path": "time-logs.log",
+  "file_path": "../time-tracker.txt",
+  "log_file_path": "",
 
   "repositories": {
     "time-tracker": [

@@ -8,7 +8,7 @@ import (
 )
 
 func GetGitStatusHash(repoPath string) (string, error) {
-	cmd := exec.Command("git", "status", "--short")
+	cmd := exec.Command("git", "diff", "HEAD")
 	cmd.Dir = repoPath
 	output, err := cmd.Output()
 

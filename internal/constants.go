@@ -46,12 +46,14 @@ func ReadConfig() *Config {
 		REPOSITORIES[project] = paths
 	}
 
-	write, err := os.OpenFile(config.LogFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil {
-		panic(err)
-	}
+	if config.LogFilePath != "" {
+		write, err := os.OpenFile(config.LogFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		if err != nil {
+			panic(err)
+		}
 
-	log.SetOutput(write)
+		log.SetOutput(write)
+	}
 
 	CHECK_INTERVAL = time.Duration(config.CheckInterval) * time.Second
 	MAX_IDLE_TIME = time.Duration(config.MaxIdleTime) * time.Second

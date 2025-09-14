@@ -76,7 +76,7 @@ func writeTimeToFile(projectName string, branch string, duration *time.Duration)
 		line := scanner.Text()
 
 		if strings.Contains(line, fmt.Sprintf(searchFormat, projectName, branch)) {
-			lines = append(lines, fmt.Sprintf(format, projectName, branch, duration.String()))
+			lines = append(lines, fmt.Sprintf(format, projectName, branch, duration.Round(time.Second).String()))
 			isExist = true
 		} else {
 			lines = append(lines, line)
@@ -84,7 +84,7 @@ func writeTimeToFile(projectName string, branch string, duration *time.Duration)
 	}
 
 	if !isExist {
-		lines = append(lines, fmt.Sprintf(format, projectName, branch, duration.String()))
+		lines = append(lines, fmt.Sprintf(format, projectName, branch, duration.Round(time.Second).String()))
 	}
 
 	err = os.WriteFile(fileInfo, []byte(strings.Join(lines, "\n")), 0644)
