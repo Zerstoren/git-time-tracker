@@ -50,5 +50,3 @@ func main() {
 	<-done
 	fmt.Println("Program terminated.")
 }
-
-// asdas 111112111111
