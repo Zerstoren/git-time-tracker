@@ -10,9 +10,8 @@ import (
 )
 
 type TrackData struct {
+	mutex        sync.Mutex
 	ProjectName  string
-	Paths        []string
-	LastHashes   []string
 	ActiveBranch string
 	ActiveTime   time.Duration
 	LastTime     time.Time
@@ -24,40 +23,26 @@ var DATA = map[string]*TrackData{}
 // working by calculating active time since last changes in hashes or branch
 // and saving it to the file after idle time or branch change
 //
-// @param wg *sync.WaitGroup - the wait group to wait for the function to complete
 // @param projectName string - the name of the project
-// @param paths []string - the paths of the project
+// @param branch string - the branch of the project
 // @return error - the error if any
-func Track(wg *sync.WaitGroup, projectName string, paths []string) error {
-	wg.Add(1)
-	defer wg.Done()
-
-	// Get branch name only from first path
-	branch, err := commands.GetGitBranch(paths[0])
-	if err != nil {
-		log.Printf("error getting branch: %v", err)
-		return err
-	}
-
-	hashes, err := getHash(paths)
-	if err != nil {
-		log.Printf("error getting hash: %v", err)
-		return err
-	}
-
+func Track(projectName string, branch string) error {
 	data, ok := DATA[projectName]
 	if !ok {
 		data = &TrackData{
+			mutex:        sync.Mutex{},
 			ProjectName:  projectName,
-			Paths:        paths,
-			LastHashes:   hashes,
 			ActiveBranch: branch,
 			ActiveTime:   time.Duration(0),
 			LastTime:     time.Now(),
 		}
 
 		DATA[projectName] = data
+		log.Printf("new project `%s` registered\n", projectName)
 	}
+
+	data.mutex.Lock()
+	defer data.mutex.Unlock()
 
 	// update after branch change
 	if branch != data.ActiveBranch {
@@ -65,89 +50,67 @@ func Track(wg *sync.WaitGroup, projectName string, paths []string) error {
 		saveActiveTime(data)
 
 		// After calculate active time, reset all values
-		data.LastHashes = hashes
 		data.ActiveBranch = branch
 		data.ActiveTime = time.Duration(0)
 		data.LastTime = time.Now()
 		return nil
 	}
 
-	// update after hashes changed
-	if isHashesChanged(data.LastHashes, hashes) {
-		data.LastHashes = hashes
-		data.ActiveTime += time.Since(data.LastTime)
-		data.LastTime = time.Now()
-		log.Printf("hashes changed on project `%s` on branch `%s`: %s\n", data.ProjectName, data.ActiveBranch, data.ActiveTime.Round(time.Second).String())
-		return nil
+	if internal.DEBUG {
+		log.Printf(
+			"add %s and sum %s to active time on project `%s`\n",
+			time.Since(data.LastTime).Round(time.Second).String(),
+			(data.ActiveTime + time.Since(data.LastTime)).Round(time.Second).String(),
+			data.ProjectName,
+		)
 	}
-
-	// update after idle time
-	if data.LastTime.Before(time.Now().Add(-internal.CHECK_INTERVAL)) && data.ActiveTime > 0 {
-		saveActiveTime(data)
-		data.ActiveTime = time.Duration(0)
-		data.LastTime = time.Now()
-	}
+	data.ActiveTime = data.ActiveTime + time.Since(data.LastTime)
+	data.LastTime = time.Now()
 
 	return nil
 }
 
 // This function is used to force save the active time to the file
 // @param projectName string - the name of the project
-// @param paths []string - the paths of the project
 // @return void
-func ForceSave(projectName string, paths []string) {
+func ForceSave(projectName string) {
 	data, ok := DATA[projectName]
 	if !ok {
 		return
 	}
 
+	data.mutex.Lock()
+	defer data.mutex.Unlock()
+
 	if data.ActiveTime <= 0 {
+		if internal.DEBUG {
+			log.Printf("no active time to save to project `%s`\n", data.ProjectName)
+		}
+
 		return
 	}
 
 	saveActiveTime(data)
+	data.ActiveTime = time.Duration(0)
+	data.LastTime = time.Now()
 	return
-}
-
-// This function is used to get the hashes of the project
-// @param paths []string - the paths of the project
-// @return []string - the hashes of the project
-// @return error - the error if any
-func getHash(paths []string) ([]string, error) {
-	hashes := []string{}
-	for _, path := range paths {
-		hash, err := commands.GetGitStatusHash(path)
-		if err != nil {
-			return nil, err
-		}
-		hashes = append(hashes, hash)
-	}
-
-	return hashes, nil
-}
-
-// This function is used to check if the hashes have changed
-// @param lastHashes []string - the last hashes of the project
-// @param newHashes []string - the new hashes of the project
-// @return bool - true if the hashes have changed, false otherwise
-func isHashesChanged(lastHashes []string, newHashes []string) bool {
-	for i, _ := range lastHashes {
-		if newHashes[i] != lastHashes[i] {
-			return true
-		}
-	}
-	return false
 }
 
 // This function is used to save the active time to the file
 // @param data *TrackData - the data of the project
 // @return void
 func saveActiveTime(data *TrackData) {
-	data.ActiveTime += time.Since(data.LastTime)
+	if data.LastTime.Before(time.Now().Add(-internal.CHECK_INTERVAL)) {
+		data.ActiveTime += internal.CHECK_INTERVAL
+		if internal.DEBUG {
+			log.Printf("add %s to active time on project `%s` on branch `%s`\n", internal.CHECK_INTERVAL.Round(time.Second).String(), data.ProjectName, data.ActiveBranch)
+		}
 
-	if data.ActiveTime == 0 {
-		log.Printf("no active time to save to project `%s` on branch `%s`\n", data.ProjectName, data.ActiveBranch)
-		return
+	} else {
+		data.ActiveTime += time.Since(data.LastTime)
+		if internal.DEBUG {
+			log.Printf("add %s to active time on project `%s` on branch `%s`\n", time.Since(data.LastTime).Round(time.Second).String(), data.ProjectName, data.ActiveBranch)
+		}
 	}
 
 	log.Printf("saving active time to project `%s` on branch `%s`: %s\n", data.ProjectName, data.ActiveBranch, data.ActiveTime.Round(time.Second).String())
