@@ -85,6 +85,7 @@ func Track(wg *sync.WaitGroup, projectName string, paths []string) error {
 	if data.LastTime.Before(time.Now().Add(-internal.CHECK_INTERVAL)) && data.ActiveTime > 0 {
 		saveActiveTime(data)
 		data.ActiveTime = time.Duration(0)
+		data.LastTime = time.Now()
 	}
 
 	return nil
