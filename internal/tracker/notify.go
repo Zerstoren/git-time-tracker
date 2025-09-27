@@ -3,7 +3,9 @@ package tracker
 import (
 	"io/fs"
 	"log"
+	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -31,17 +33,28 @@ func Notify(wg *sync.WaitGroup, repository internal.Repository, fn func(event fs
 					return
 				}
 
-				for _, exclude := range repository.Exclude {
-					if strings.Contains(event.Name, exclude) {
-						if internal.DEBUG {
-							log.Println("exclude: ", event.Name, exclude)
+				if event.Has(fsnotify.Create) {
+					st, err := os.Stat(event.Name)
+					if err == nil {
+						if st.IsDir() && !slices.Contains(watcher.WatchList(), event.Name) {
+							watcher.Add(event.Name)
 						}
-						continue
 					}
 				}
 
-				lastEvent = event
-				debounce.Reset(internal.DEBOUNCE_INTERVAL)
+				if event.Has(fsnotify.Create) || event.Has(fsnotify.Write) || event.Has(fsnotify.Remove) || event.Has(fsnotify.Rename) {
+					for _, exclude := range repository.Exclude {
+						if strings.Contains(event.Name, exclude) {
+							if internal.DEBUG {
+								log.Println("exclude: ", event.Name, exclude)
+							}
+							continue
+						}
+					}
+
+					lastEvent = event
+					debounce.Reset(internal.DEBOUNCE_INTERVAL)
+				}
 
 			case <-debounce.C:
 				if lastEvent.Name == "" {

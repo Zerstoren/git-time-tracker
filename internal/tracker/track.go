@@ -14,7 +14,7 @@ type TrackData struct {
 	ProjectName  string
 	ActiveBranch string
 	ActiveTime   time.Duration
-	LastTime     time.Time
+	LastTime     *time.Time
 }
 
 var DATA = map[string]*TrackData{}
@@ -28,13 +28,14 @@ var DATA = map[string]*TrackData{}
 // @return error - the error if any
 func Track(projectName string, branch string) error {
 	data, ok := DATA[projectName]
+	timeNow := time.Now()
 	if !ok {
 		data = &TrackData{
 			mutex:        sync.Mutex{},
 			ProjectName:  projectName,
 			ActiveBranch: branch,
 			ActiveTime:   time.Duration(0),
-			LastTime:     time.Now(),
+			LastTime:     &timeNow,
 		}
 
 		DATA[projectName] = data
@@ -52,20 +53,26 @@ func Track(projectName string, branch string) error {
 		// After calculate active time, reset all values
 		data.ActiveBranch = branch
 		data.ActiveTime = time.Duration(0)
-		data.LastTime = time.Now()
+		data.LastTime = nil
 		return nil
+	}
+
+	if data.LastTime == nil {
+		data.LastTime = &timeNow
+		data.ActiveTime = time.Duration(0)
 	}
 
 	if internal.DEBUG {
 		log.Printf(
 			"add %s and sum %s to active time on project `%s`\n",
-			time.Since(data.LastTime).Round(time.Second).String(),
-			(data.ActiveTime + time.Since(data.LastTime)).Round(time.Second).String(),
+			time.Since(*data.LastTime).Round(time.Second).String(),
+			(data.ActiveTime + time.Since(*data.LastTime)).Round(time.Second).String(),
 			data.ProjectName,
 		)
 	}
-	data.ActiveTime = data.ActiveTime + time.Since(data.LastTime)
-	data.LastTime = time.Now()
+
+	data.ActiveTime = data.ActiveTime + time.Since(*data.LastTime)
+	data.LastTime = &timeNow
 
 	return nil
 }
@@ -82,6 +89,10 @@ func ForceSave(projectName string) {
 	data.mutex.Lock()
 	defer data.mutex.Unlock()
 
+	if data.LastTime == nil {
+		return
+	}
+
 	if data.ActiveTime <= 0 {
 		if internal.DEBUG {
 			log.Printf("no active time to save to project `%s`\n", data.ProjectName)
@@ -92,7 +103,7 @@ func ForceSave(projectName string) {
 
 	saveActiveTime(data)
 	data.ActiveTime = time.Duration(0)
-	data.LastTime = time.Now()
+	data.LastTime = nil
 	return
 }
 
@@ -100,6 +111,10 @@ func ForceSave(projectName string) {
 // @param data *TrackData - the data of the project
 // @return void
 func saveActiveTime(data *TrackData) {
+	if data.LastTime == nil {
+		return
+	}
+
 	if data.LastTime.Before(time.Now().Add(-internal.CHECK_INTERVAL)) {
 		data.ActiveTime += internal.CHECK_INTERVAL
 		if internal.DEBUG {
@@ -107,9 +122,9 @@ func saveActiveTime(data *TrackData) {
 		}
 
 	} else {
-		data.ActiveTime += time.Since(data.LastTime)
+		data.ActiveTime += time.Since(*data.LastTime)
 		if internal.DEBUG {
-			log.Printf("add %s to active time on project `%s` on branch `%s`\n", time.Since(data.LastTime).Round(time.Second).String(), data.ProjectName, data.ActiveBranch)
+			log.Printf("add %s to active time on project `%s` on branch `%s`\n", time.Since(*data.LastTime).Round(time.Second).String(), data.ProjectName, data.ActiveBranch)
 		}
 	}
 

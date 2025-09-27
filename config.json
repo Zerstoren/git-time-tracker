@@ -1,15 +1,15 @@
 {
   "mode": "debug",
-  "check_interval": "1m",
+  "check_interval": "10m",
   "debounce_interval": "2s",
   "write_to_file": true,
   
   "file_path": "../time-tracker.txt",
-  "log_file_path": "",
+  "log_file_path": "../time-logs.log",
 
   "repositories": {
     "time-tracker": {
-      "path": "/Users/user/Documents/Github/git-time-tracker",
+      "path": "/path/to/repository",
       "exclude": [
         "/node_modules",
         "/dist",
